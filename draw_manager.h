@@ -14,13 +14,11 @@
 #define GRID_X 10
 #define GRID_Y 10
 
-#define GRID_MARGIN 1
+#define GRID_MARGIN_X (GRID_X + 1)
+#define GRID_MARGIN_Y (GRID_Y + 1)
 
-#define GRID_MARGIN_X GRID_X + GRID_MARGIN
-#define GRID_MARGIN_Y GRID_Y + GRID_MARGIN
-
-#define FULL_GRID_X GRID_MARGIN_X + GRID_MARGIN
-#define FULL_GRID_Y GRID_MARGIN_Y + GRID_MARGIN
+#define FULL_GRID_X (GRID_MARGIN_X + 1)
+#define FULL_GRID_Y (GRID_MARGIN_Y + 1)
 
 #define EMPTY_CHAR 176
 #define BLOCK_CHAR 219
@@ -38,43 +36,44 @@ enum LineRotation
     Vertical
 };
 
-enum Bool
+typedef enum
 {
-    False,
-    True
-};
+    false,
+    true
+} Bool;
 
-struct Object
+typedef struct
 {
     char *obj_ptr;
-    unsigned char position_x;
-    unsigned char position_y;
+    unsigned char starting_x;
+    unsigned char starting_y;
     unsigned char dimension_x;
     unsigned char dimension_y;
     enum LineRotation rotation;
-};
+} Object;
 
-struct Square
+typedef struct
 {
     unsigned char absolute_space[SQUARE_Y][SQUARE_X];
-};
+} Square;
 
-struct Line
+typedef struct
 {
     unsigned char absolute_space[LINE_Y][LINE_X];
-};
+} Line;
 
-static struct Square $square;
-static struct Line $line;
+static Square $square;
+static Line $line;
 static unsigned char $grid[FULL_GRID_Y][FULL_GRID_X];
 
 void initObjects();
 void initGrid(unsigned char *grid_ptr);
+void printEnclosureGrid(const unsigned char *grid_ptr);
 void printGrid(const unsigned char *grid_ptr);
-void placeObject(struct Object object, unsigned char *grid_ptr);
-int canPlace(struct Object object);
+void placeObject(Object object, unsigned char *grid_ptr);
+int canPlace(Object object);
 
-void generateLine(struct Object *line, unsigned char x, enum LineRotation rotation);
-void generateSquare(struct Object square, unsigned char x);
+void generateLine(Object *line, unsigned char x, unsigned char y, enum LineRotation rotation);
+void generateSquare(Object *square, unsigned char x, unsigned char y);
 void clearConsole();
 #endif //TETRIS_DRAW_MANAGER_H

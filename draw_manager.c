@@ -8,81 +8,64 @@
 
 void initObjects()
 {
-    int i, j;
-    for(i = 0; i < SQUARE_Y; i++)
+    int y, x;
+    for(y = 0; y < SQUARE_Y; y++)
     {
-        for(j = 0; j < SQUARE_X; j++)
+        for(x = 0; x < SQUARE_X; x++)
         {
-            $square.absolute_space[i][j] = BLOCK_CHAR;
+            $square.absolute_space[y][x] = BLOCK_CHAR;
         }
     }
-    for(i = 0; i < LINE_Y; i++)
+    for(y = 0; y < LINE_Y; y++)
     {
-        for(j = 0; j < LINE_X; j++)
+        for(x = 0; x < LINE_X; x++)
         {
-            $line.absolute_space[i][j] = BLOCK_CHAR;
+            $line.absolute_space[y][x] = BLOCK_CHAR;
         }
     }
 }
 
-void generateLine(struct Object *line, unsigned char x, enum LineRotation rotation)
+void generateLine(Object *line, unsigned char x, unsigned char y, enum LineRotation rotation)
 {
     line->obj_ptr = $line.absolute_space;
-    line->position_x = x;
-    line->position_y = LINE_Y;
+    line->starting_x = x;
+    line->starting_y = y;
     line->dimension_x = LINE_X;
     line->dimension_y = LINE_Y;
     line->rotation = rotation;
 }
 
-void generateSquare(struct Object square, unsigned char x)
+void generateSquare(Object *square, unsigned char x, unsigned char y)
 {
-    square.obj_ptr = $square.absolute_space;
-    square.position_x = x;
-    square.position_y = SQUARE_Y;
-    square.dimension_x = SQUARE_X;
-    square.dimension_y = SQUARE_Y;
-    square.rotation = NoRotation;
+    square->obj_ptr = $square.absolute_space;
+    square->starting_x = x;
+    square->starting_y = y;
+    square->dimension_x = SQUARE_X;
+    square->dimension_y = SQUARE_Y;
+    square->rotation = NoRotation;
 }
 void initGrid(unsigned char *grid_ptr)
 {
-    int y, x, obj;
+    int y, x;
 
-    *(grid_ptr) = TOPLEFT_CHAR;
-    *(grid_ptr + GRID_MARGIN_X) = TOPRIGHT_CHAR;
-    *(grid_ptr + ((GRID_MARGIN_Y) * (FULL_GRID_Y))) = BOTTOMLEFT_CHAR;
-    *(grid_ptr + GRID_MARGIN_X + ((GRID_MARGIN_Y) * (FULL_GRID_Y))) = BOTTOMRIGHT_CHAR;
-
-    for(y = 0; y < FULL_GRID_Y; y++)
+    for(y = 0; y < GRID_Y; y++)
     {
-        for(x = 0; x < FULL_GRID_X; x++)
+        for(x = 0; x < GRID_X; x++)
         {
-            if(y == 0 || y == GRID_MARGIN_Y)
-            {
-                if(x == 0 || x == GRID_MARGIN_X)
-                    continue;
-                obj = HORIZZONTAL_MARGIN_CHAR;
-            } else {
-                if(x == 0 || x == GRID_MARGIN_X)
-                    obj = VERTICAL_MARGIN_CHAR;
-                else {
-                    obj = EMPTY_CHAR;
-                }
-            }
-            *(grid_ptr + x + (y * (FULL_GRID_Y)))  = obj;
+            *(grid_ptr + x + (y * GRID_Y))  = EMPTY_CHAR;
         }
     }
 }
 
-int canPlace(struct Object object)
+int canPlace(Object object)
 {
-    enum Bool can = False;
+    Bool can = false;
     switch (object.rotation) {
         case NoRotation:
             break;
         case Horizontal:
-            if(object.position_x > 0 && object.position_x < GRID_MARGIN_X - 2 && object.position_y > 0 && object.position_y < GRID_MARGIN_Y)
-                can = True;
+            if(object.starting_x > 0 && object.starting_x < GRID_MARGIN_X - 2 && object.starting_y > 0 && object.starting_y < GRID_MARGIN_Y)
+                can = true;
             break;
         case Vertical:
             break;
@@ -90,35 +73,66 @@ int canPlace(struct Object object)
     return can;
 }
 
-void placeObject(struct Object object, unsigned char *grid_ptr)
+void placeObject(Object object, unsigned char *grid_ptr)
 {
+    *(grid_ptr + object.starting_x + (GRID_Y * object.starting_y)) = *(object.obj_ptr);
     switch (object.rotation) {
         case NoRotation:
+            *(grid_ptr + object.starting_x + 1 + (GRID_Y * object.starting_y)) = *(object.obj_ptr + 1);
+            *(grid_ptr + object.starting_x + (GRID_Y * (object.starting_y + 1))) = *(object.obj_ptr + 2);
+            *(grid_ptr + object.starting_x + 1 + (GRID_Y * (object.starting_y + 1))) = *(object.obj_ptr + 3);
             break;
         case Horizontal:
-            *(grid_ptr + object.position_x + (GRID_MARGIN * (FULL_GRID_Y))) = *(object.obj_ptr);
-            *(grid_ptr + object.position_x + 1 + (GRID_MARGIN * (FULL_GRID_Y))) = *(object.obj_ptr + 1);
-            *(grid_ptr + object.position_x + 2 + (GRID_MARGIN * (FULL_GRID_Y))) = *(object.obj_ptr + 2);
+            *(grid_ptr + object.starting_x + 1 + (GRID_Y * object.starting_y)) = *(object.obj_ptr + 1);
+            *(grid_ptr + object.starting_x + 2 + (GRID_Y * object.starting_y)) = *(object.obj_ptr + 2);
             break;
         case Vertical:
-            *(grid_ptr + object.position_x) = *(object.obj_ptr);
-            *(grid_ptr + object.position_x + (1 * (FULL_GRID_Y))) = *(object.obj_ptr + 1);
-            *(grid_ptr + object.position_x + (2 * (FULL_GRID_Y))) = *(object.obj_ptr + 2);
+            *(grid_ptr + object.starting_x + (GRID_Y * (object.starting_y + 1))) = *(object.obj_ptr + 1);
+            *(grid_ptr + object.starting_x + (GRID_Y * (object.starting_y + 2))) = *(object.obj_ptr + 2);
             break;
     }
 }
 
-void printGrid(const unsigned char *grid_ptr)
+void printEnclosureGrid(const unsigned char *grid_ptr)
 {
-    int y, x;
+    int y, x, temp;
     for(y = 0; y < FULL_GRID_Y; y++)
     {
         for(x = 0; x < FULL_GRID_X; x++)
         {
-            printf("%c", *(grid_ptr + x + (y * (FULL_GRID_Y))));
+            if(x == 0 && y == 0) {
+                temp = TOPLEFT_CHAR;
+            } else if(x == GRID_MARGIN_X && y == 0) {
+                temp = TOPRIGHT_CHAR;
+            } else if(x == 0 && y == GRID_MARGIN_Y) {
+                temp = BOTTOMLEFT_CHAR;
+            } else if(x == GRID_MARGIN_X && y == GRID_MARGIN_Y) {
+                temp = BOTTOMRIGHT_CHAR;
+            } else if(x == 0 || x == GRID_MARGIN_X) {
+                temp = VERTICAL_MARGIN_CHAR;
+            } else if(y == 0 || y == GRID_MARGIN_Y) {
+                temp = HORIZZONTAL_MARGIN_CHAR;
+            } else temp = *(grid_ptr + ((x - 1) + ((y - 1) * (GRID_Y))));
+            printf("%c", temp);
         }
         printf("\n");
     }
+    printf("\n");
+}
+
+
+void printGrid(const unsigned char *grid_ptr)
+{
+    int y, x;
+    for(y = 0; y < GRID_Y; y++)
+    {
+        for(x = 0; x < GRID_X; x++)
+        {
+            printf("%c", *(grid_ptr + x + (y * (GRID_Y))));
+        }
+        printf("\n");
+    }
+    printf("\n");
 }
 
 void clearConsole(){

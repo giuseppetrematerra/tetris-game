@@ -7,12 +7,14 @@ int main()
     unsigned char *ptr = (unsigned char *) $grid;
     initObjects();
     initGrid(ptr);
-    struct Object line;
-    generateLine(&line, 12, Horizontal);
-    printGrid(ptr);
+    printEnclosureGrid(ptr);
+    Object line, square;
+    generateLine(&line, 3, 2, Vertical);
     placeObject(line, ptr);
-    printGrid(ptr);
-    printf("%d\n", canPlace(line));
+    generateSquare(&square, 3, 5);
+    placeObject(square, ptr);
+    printEnclosureGrid(ptr);
+    //printf("%d\n", canPlace(line));
     return 0;
 }
 
