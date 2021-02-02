@@ -6,48 +6,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void initObjects()
+void initGrid(uint8_t *grid_ptr)
 {
-    int y, x;
-    for(y = 0; y < SQUARE_Y; y++)
-    {
-        for(x = 0; x < SQUARE_X; x++)
-        {
-            $square.absolute_space[y][x] = BLOCK_CHAR;
-        }
-    }
-    for(y = 0; y < LINE_Y; y++)
-    {
-        for(x = 0; x < LINE_X; x++)
-        {
-            $line.absolute_space[y][x] = BLOCK_CHAR;
-        }
-    }
-}
-
-void generateLine(Object *line, unsigned char x, unsigned char y, enum LineRotation rotation)
-{
-    line->obj_ptr = $line.absolute_space;
-    line->starting_x = x;
-    line->starting_y = y;
-    line->dimension_x = LINE_X;
-    line->dimension_y = LINE_Y;
-    line->rotation = rotation;
-}
-
-void generateSquare(Object *square, unsigned char x, unsigned char y)
-{
-    square->obj_ptr = $square.absolute_space;
-    square->starting_x = x;
-    square->starting_y = y;
-    square->dimension_x = SQUARE_X;
-    square->dimension_y = SQUARE_Y;
-    square->rotation = NoRotation;
-}
-void initGrid(unsigned char *grid_ptr)
-{
-    int y, x;
-
+    uint8_t y, x;
     for(y = 0; y < GRID_Y; y++)
     {
         for(x = 0; x < GRID_X; x++)
@@ -57,43 +18,94 @@ void initGrid(unsigned char *grid_ptr)
     }
 }
 
-int canPlace(Object object)
+object_t *generateObject(uint8_t position_x, uint8_t position_y, Shape shape, Rotation rotation)
 {
-    Bool can = false;
-    switch (object.rotation) {
-        case NoRotation:
-            break;
-        case Horizontal:
-            if(object.starting_x > 0 && object.starting_x < GRID_MARGIN_X - 2 && object.starting_y > 0 && object.starting_y < GRID_MARGIN_Y)
-                can = true;
-            break;
-        case Vertical:
-            break;
-    }
-    return can;
+    if(rotation == NoRotation && shape != Square) return NULL;
+    object_t *object = calloc(1, sizeof(object_t));
+    object->position_x = position_x;
+    object->position_y = position_y;
+    object->rotation = rotation;
+    object->shape = shape;
+    return object;
 }
 
-void placeObject(Object object, unsigned char *grid_ptr)
+bool canDrawObject(object_t obj)
 {
-    *(grid_ptr + object.starting_x + (GRID_Y * object.starting_y)) = *(object.obj_ptr);
-    switch (object.rotation) {
-        case NoRotation:
-            *(grid_ptr + object.starting_x + 1 + (GRID_Y * object.starting_y)) = *(object.obj_ptr + 1);
-            *(grid_ptr + object.starting_x + (GRID_Y * (object.starting_y + 1))) = *(object.obj_ptr + 2);
-            *(grid_ptr + object.starting_x + 1 + (GRID_Y * (object.starting_y + 1))) = *(object.obj_ptr + 3);
-            break;
+    switch (obj.rotation) {
         case Horizontal:
-            *(grid_ptr + object.starting_x + 1 + (GRID_Y * object.starting_y)) = *(object.obj_ptr + 1);
-            *(grid_ptr + object.starting_x + 2 + (GRID_Y * object.starting_y)) = *(object.obj_ptr + 2);
-            break;
+            if(obj.position_x >= 0 && obj.position_x < GRID_X - 2 && obj.position_y >= 0 && obj.position_y < GRID_Y)
+                return true;
         case Vertical:
-            *(grid_ptr + object.starting_x + (GRID_Y * (object.starting_y + 1))) = *(object.obj_ptr + 1);
-            *(grid_ptr + object.starting_x + (GRID_Y * (object.starting_y + 2))) = *(object.obj_ptr + 2);
-            break;
+            if(obj.position_x >= 0 && obj.position_x < GRID_X && obj.position_y >= 0 && obj.position_y < GRID_Y - 2)
+                return true;
+        default:
+            return false;
     }
 }
 
-void printEnclosureGrid(const unsigned char *grid_ptr)
+void tryAddObject(linked_object_t *rootObject, object_t *object)
+{
+    if(object != NULL)
+    {
+        if(!hasObject(rootObject, *object) && canDrawObject(*object))
+            push(rootObject, *object);
+    } else {
+        printf("[ERROR] You cant add a not-valid object.\n\n");
+    }
+}
+
+void tryRemoveObject(linked_object_t *rootObject, object_t object)
+{
+    if(hasObject(rootObject, object))
+        pop(rootObject, object);
+}
+
+void drawObject(uint8_t *grid_ptr, object_t obj)
+{
+    *(grid_ptr + obj.position_x + (GRID_Y * obj.position_y)) = BLOCK_CHAR;
+    switch (obj.rotation) {
+        case NoRotation:
+            *(grid_ptr + obj.position_x + 1 + (GRID_Y * obj.position_y)) = BLOCK_CHAR;
+            *(grid_ptr + obj.position_x + (GRID_Y * (obj.position_y + 1))) = BLOCK_CHAR;
+            *(grid_ptr + obj.position_x + 1 + (GRID_Y * (obj.position_y + 1))) = BLOCK_CHAR;
+            break;
+        case Horizontal:
+            *(grid_ptr + obj.position_x + 1 + (GRID_Y * obj.position_y)) = BLOCK_CHAR;
+            *(grid_ptr + obj.position_x + 2 + (GRID_Y * obj.position_y)) = BLOCK_CHAR;
+            break;
+        case Vertical:
+            *(grid_ptr + obj.position_x + (GRID_Y * (obj.position_y + 1))) = BLOCK_CHAR;
+            *(grid_ptr + obj.position_x + (GRID_Y * (obj.position_y + 2))) = BLOCK_CHAR;
+            break;
+    }
+}
+
+void drawObjects(linked_object_t *rootObject, uint8_t *grid_ptr)
+{
+    linked_object_t *current = rootObject->next;
+    while(current != NULL)
+    {
+        object_t value = current->value;
+        drawObject(grid_ptr, value);
+        current = current->next;
+    }
+}
+
+void printGrid(const uint8_t *grid_ptr)
+{
+    int y, x;
+    for(y = 0; y < GRID_Y; y++)
+    {
+        for(x = 0; x < GRID_X; x++)
+        {
+            printf("%c", *(grid_ptr + x + (y * (GRID_Y))));
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+void drawFinalGrid(const uint8_t *grid_ptr)
 {
     int y, x, temp;
     for(y = 0; y < FULL_GRID_Y; y++)
@@ -120,20 +132,25 @@ void printEnclosureGrid(const unsigned char *grid_ptr)
     printf("\n");
 }
 
-
-void printGrid(const unsigned char *grid_ptr)
+void moveObject(linked_object_t *rootObject, object_t *obj, Direction direction)
 {
-    int y, x;
-    for(y = 0; y < GRID_Y; y++)
-    {
-        for(x = 0; x < GRID_X; x++)
-        {
-            printf("%c", *(grid_ptr + x + (y * (GRID_Y))));
-        }
-        printf("\n");
+    uint8_t end_x = obj->position_x, end_y = obj->position_y;
+    switch (direction) {
+        case Left:
+            end_x -= 1;
+            break;
+        case Right:
+            end_x += 1;
+            break;
+        case Bottom:
+            end_y += 1;
+            break;
     }
-    printf("\n");
+    object_t *temp = generateObject(end_x, end_y, obj->shape, obj->rotation);
+    tryRemoveObject(rootObject, *obj);
+    tryAddObject(rootObject, temp);
 }
+
 
 void clearConsole(){
 #if defined(__linux__) || defined(__unix__) || defined(__APPLE__)

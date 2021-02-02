@@ -1,15 +1,10 @@
 //
 // Created by giuse on 24/01/2021.
 //
+#include "object_linked_list.h"
 
 #ifndef TETRIS_DRAW_MANAGER_H
 #define TETRIS_DRAW_MANAGER_H
-
-#define SQUARE_X 2
-#define SQUARE_Y 2
-
-#define LINE_X 1
-#define LINE_Y 3
 
 #define GRID_X 10
 #define GRID_Y 10
@@ -29,51 +24,20 @@
 #define VERTICAL_MARGIN_CHAR 179
 #define HORIZZONTAL_MARGIN_CHAR 196
 
-enum LineRotation
-{
-    NoRotation,
-    Horizontal,
-    Vertical
-};
+void initGrid(uint8_t *grid_ptr);
+object_t *generateObject(uint8_t position_x, uint8_t position_y, Shape shape, Rotation rotation);
+void tryAddObject(linked_object_t *rootObject, object_t *object);
+void tryRemoveObject(linked_object_t *rootObject, object_t object);
 
-typedef enum
-{
-    false,
-    true
-} Bool;
+bool canDrawObject(object_t object);
+void drawObject(uint8_t *grid_ptr, object_t obj);
+void drawObjects(linked_object_t *rootObject, uint8_t *grid_ptr);
+void drawFinalGrid(const uint8_t *grid_ptr);
 
-typedef struct
-{
-    char *obj_ptr;
-    unsigned char starting_x;
-    unsigned char starting_y;
-    unsigned char dimension_x;
-    unsigned char dimension_y;
-    enum LineRotation rotation;
-} Object;
+void printGrid(const uint8_t *grid_ptr);
 
-typedef struct
-{
-    unsigned char absolute_space[SQUARE_Y][SQUARE_X];
-} Square;
-
-typedef struct
-{
-    unsigned char absolute_space[LINE_Y][LINE_X];
-} Line;
-
-static Square $square;
-static Line $line;
-static unsigned char $grid[FULL_GRID_Y][FULL_GRID_X];
-
-void initObjects();
-void initGrid(unsigned char *grid_ptr);
-void printEnclosureGrid(const unsigned char *grid_ptr);
-void printGrid(const unsigned char *grid_ptr);
-void placeObject(Object object, unsigned char *grid_ptr);
-int canPlace(Object object);
-
-void generateLine(Object *line, unsigned char x, unsigned char y, enum LineRotation rotation);
-void generateSquare(Object *square, unsigned char x, unsigned char y);
+void generateLine(object_t *line, Rotation rotation);
+void generateSquare(object_t *square);
+void moveObject(linked_object_t *rootObject, object_t *obj, Direction direction);
 void clearConsole();
 #endif //TETRIS_DRAW_MANAGER_H
