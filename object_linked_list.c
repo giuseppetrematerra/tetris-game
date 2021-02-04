@@ -4,8 +4,6 @@
 
 #include "object_linked_list.h"
 #include <stdlib.h>
-#include <stdio.h>
-
 void push(linked_object_t *root, object_t obj)
 {
     linked_object_t *last = NULL;
@@ -24,21 +22,25 @@ void push(linked_object_t *root, object_t obj)
 
 void pop(linked_object_t *root, object_t obj)
 {
-    linked_object_t *current = root->next;
+    linked_object_t *current = root;
     while(current != NULL)
     {
-        linked_object_t *previous = current;
-        linked_object_t *next = previous->next;
-        if(next != NULL)
+        linked_object_t *middle = current->next;
+        if(middle != NULL)
         {
-            object_t value = next->value;
-            if(value.rotation == obj.rotation && value.position_x == obj.position_x && value.position_y == obj.position_y)
+            linked_object_t *next = middle->next;
+            if(next != NULL)
             {
-                previous->next = next->next;
+                if(compare(middle->value, obj))
+                {
+                    current->next = next;
+                    return;
+                } else current = middle;
+            } else {
+                current->next = NULL;
                 return;
             }
         }
-        current = current->next;
     }
 }
 

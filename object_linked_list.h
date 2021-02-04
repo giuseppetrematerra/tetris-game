@@ -7,7 +7,6 @@
 
 #include "object.h"
 
-
 typedef struct linked_object {
     object_t value;
     struct linked_object *next;

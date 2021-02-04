@@ -1,43 +1,38 @@
 #include <stdio.h>
-#include <conio.h>
 #include <stdlib.h>
+#include <locale.h>
 #include "draw_manager.h"
 
 int main()
 {
-    object_t *line, *line2, *line3;
+    setlocale(LC_ALL, "en_US.UTF-8");
+    object_t *tempObject, *line2, *line3, *line4;
     linked_object_t *rootObject = calloc(1, sizeof(linked_object_t));
-    uint8_t *ptr = calloc(GRID_Y * GRID_X, sizeof(uint8_t*));
-    line = generateObject(3, 0, Line, Horizontal);
-    line2 = generateObject(3, 2, Line, Horizontal);
-    line3 = generateObject(3, 6, Line, Horizontal);
-    initGrid(ptr);
-    tryAddObject(rootObject, line);
-    tryAddObject(rootObject, line2);
-    tryAddObject(rootObject, line3);
-    drawObjects(rootObject, ptr);
-    drawFinalGrid(ptr);
-    moveObject(rootObject, line2, Right);
-    drawObjects(rootObject, ptr);
-    drawFinalGrid(ptr);
-    //printf("%d\n", canPlace(line));
-/*    int test = getch();
-    if (test == 0 || test == 224) {
-        switch(getch()) {
-            case 72:
-                printf("Printed UP");
-                break;
-            case 75:
-                printf("Printed LEFT");
-                break;
-            case 77:
-                printf("Printed RIGHT");
-                break;
-            case 80:
-                printf("Printed BOTTOM");
-                break;
-        }
-    } else printf("%d", test);*/
+    wchar_t *tempGrid = calloc(GRID_Y * GRID_X, sizeof(wchar_t*));
+    wchar_t *finalGrid = calloc(GRID_Y * GRID_X, sizeof(wchar_t*));
+    tempObject = generateObject(0, 7, VerticalLine);
+    line2 = generateObject(2, 2, HorizontalLine);
+    line3 = generateObject(3, 3, HorizontalLine);
+    line4 = generateObject(4, 4, HorizontalLine);
+    initGrid(tempGrid);
+    initGrid(finalGrid);
+    tryAddObject(rootObject, tempObject);
+    drawObjects(rootObject, tempGrid);
+    printGrid(tempGrid);
+/*//    moveObject(rootObject, tempObject, Top);
+    rotateObject(rootObject, tempObject);
+    initGrid(tempGrid);
+    drawObjects(rootObject, tempGrid);
+    printGrid(tempGrid);*/
+    do {
+        handleArrow(rootObject, tempObject);
+        //moveObject(rootObject, tempObject, Right);
+        initGrid(tempGrid);
+        drawObjects(rootObject, tempGrid);
+        clearConsole();
+        drawFinalGrid(tempGrid);
+    } while(true);
+
     return 0;
 }
 
