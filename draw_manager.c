@@ -13,103 +13,111 @@ void initGrid(wchar_t *grid_ptr)
     {
         for(x = 0; x < GRID_X; x++)
         {
-            *(grid_ptr + x + (y * GRID_Y))  = EMPTY_CHAR;
+            *(grid_ptr + x + (y * GRID_Y)) = EMPTY_CHAR;
         }
     }
 }
 
-object_t *generateObject(uint8_t position_x, uint8_t position_y, Rotation rotation)
+bool isBlockThere(object_list_t objects, uint8_t x, uint8_t y, object_t exclude)
 {
-    object_t *object = calloc(1, sizeof(object_t));
-    object->position_x = position_x;
-    object->position_y = position_y;
-    object->rotation = rotation;
-    return object;
-}
-
-bool canDrawObject(object_t obj)
-{
-    switch (obj.rotation) {
-        case HorizontalLine:
-            if(obj.position_x >= 0 && obj.position_x < GRID_X - 2 && obj.position_y >= 0 && obj.position_y < GRID_Y)
-                return true;
-        case VerticalLine:
-            if(obj.position_x >= 0 && obj.position_x < GRID_X && obj.position_y >= 0 && obj.position_y < GRID_Y - 2)
-                return true;
-        default:
-            return false;
+    uint8_t i, j;
+    for(i = 0; i < objects.size; i++)
+    {
+        object_t *object = objects.array[i];
+        if(compareObject(*object, exclude)) continue;
+        block_list_t blocks = *objects.array[i]->blocks;
+        for(j = 0; j < blocks.size; j++)
+        {
+            block_t block = blocks.array[j];
+            if(block.pos_x == x && block.pos_y == y && block.visible) return true;
+        }
     }
+    return false;
 }
 
-bool isValidPosition(uint8_t x, uint8_t y, Rotation rotation)
+bool isValidPosition(uint8_t x, uint8_t y)
 {
     return(x >= 0 && x < GRID_X && y >= 0 && y < GRID_Y);
 }
 
-bool isValidMove(uint8_t start_x, uint8_t start_y, Rotation rotation)
+bool isValidMove(object_list_t objects, object_t obj, direction_t direction)
 {
-    uint8_t end_x = start_x, end_y = start_y;
-    switch (rotation) {
-        case NoRotation:
-            end_x += 1;
-            end_y += 1;
+    uint8_t i;
+    int8_t extra_x = 0, extra_y = 0, final_x, final_y;
+
+    switch (direction) {
+        case Left:
+            extra_x -= 1;
             break;
-        case HorizontalLine:
-            end_x += 2;
+        case Right:
+            extra_x += 1;
             break;
-        case VerticalLine:
-            end_y += 2;
+        case Bottom:
+            extra_y += 1;
+            break;
+        case Top:
+            extra_y -= 1;
             break;
     }
 
-    return(start_x >= 0 && start_x < GRID_X && end_x < GRID_X && start_y >= 0 && start_y < GRID_Y && end_y < GRID_Y);
-}
-
-void tryAddObject(linked_object_t *rootObject, object_t *object)
-{
-    if(object != NULL)
+    for(i = 0; i < obj.blocks->size; i++)
     {
-        if(!hasObject(rootObject, *object) && isValidMove(object->position_x, object->position_y, object->rotation))
-            push(rootObject, *object);
-    } else {
-        printf("[ERROR] You cant add a not-valid object.\n\n");
+        block_t block = obj.blocks->array[i];
+        final_x = block.pos_x + extra_x;
+        final_y = block.pos_y + extra_y;
+        if(!isValidPosition(final_x, final_y) || isBlockThere(objects, final_x, final_y, obj))
+            return false;
     }
+    return true;
 }
 
-void tryRemoveObject(linked_object_t *rootObject, object_t object)
+
+bool canDrawBlock(object_list_t objects, block_t block)
 {
-    if(hasObject(rootObject, object))
-        pop(rootObject, object);
+    return isValidPosition(block.pos_x, block.pos_y);
+}
+
+bool canDrawObject(object_list_t objects, object_t obj)
+{
+    uint8_t i;
+    for(i = 0; i < obj.blocks->size; i++)
+    {
+        block_t block = obj.blocks->array[i];
+        if(!canDrawBlock(objects, block)) return false;
+    }
+    return true;
+}
+
+void drawBlock(wchar_t *grid_ptr, block_t block)
+{
+    *(grid_ptr + block.pos_x + (GRID_Y * block.pos_y)) = BLOCK_CHAR;
 }
 
 void drawObject(wchar_t *grid_ptr, object_t obj)
 {
-    *(grid_ptr + obj.position_x + (GRID_Y * obj.position_y)) = BLOCK_CHAR;
-    switch (obj.rotation) {
-        case NoRotation:
-            *(grid_ptr + obj.position_x + 1 + (GRID_Y * obj.position_y)) = BLOCK_CHAR;
-            *(grid_ptr + obj.position_x + (GRID_Y * (obj.position_y + 1))) = BLOCK_CHAR;
-            *(grid_ptr + obj.position_x + 1 + (GRID_Y * (obj.position_y + 1))) = BLOCK_CHAR;
-            break;
-        case HorizontalLine:
-            *(grid_ptr + obj.position_x + 1 + (GRID_Y * obj.position_y)) = BLOCK_CHAR;
-            *(grid_ptr + obj.position_x + 2 + (GRID_Y * obj.position_y)) = BLOCK_CHAR;
-            break;
-        case VerticalLine:
-            *(grid_ptr + obj.position_x + (GRID_Y * (obj.position_y + 1))) = BLOCK_CHAR;
-            *(grid_ptr + obj.position_x + (GRID_Y * (obj.position_y + 2))) = BLOCK_CHAR;
-            break;
+    uint8_t i;
+    for(i = 0; i < obj.blocks->size; i++)
+    {
+        block_t block = obj.blocks->array[i];
+        drawBlock(grid_ptr, block);
     }
 }
 
-void drawObjects(linked_object_t *rootObject, wchar_t *grid_ptr)
+void drawObjects(wchar_t *grid_ptr, object_list_t *list)
 {
-    linked_object_t *current = rootObject->next;
-    while(current != NULL)
+    uint8_t i;
+    for(i = 0; i < list->size; i++)
     {
-        object_t value = current->value;
-        drawObject(grid_ptr, value);
-        current = current->next;
+        drawObject(grid_ptr, *list->array[i]);
+    }
+}
+
+
+void tryAddObject(object_list_t *list, object_t *object)
+{
+    if(containsObject(*list, *object) == -1 && canDrawObject(*list, *object))
+    {
+        appendObjectList(list, object);
     }
 }
 
@@ -146,7 +154,7 @@ void drawFinalGrid(const wchar_t *grid_ptr)
             } else if(x == 0 || x == GRID_MARGIN_X) {
                 temp = VERTICAL_MARGIN_CHAR;
             } else if(y == 0 || y == GRID_MARGIN_Y) {
-                temp = HORIZZONTAL_MARGIN_CHAR;
+                temp = HORIZONTAL_MARGIN_CHAR;
             } else temp = *(grid_ptr + ((x - 1) + ((y - 1) * (GRID_Y))));
             printf("%lc", temp);
         }
@@ -155,9 +163,15 @@ void drawFinalGrid(const wchar_t *grid_ptr)
     printf("\n");
 }
 
-void moveObject(linked_object_t *rootObject, object_t *obj, Direction direction)
+void moveBlock(block_t *block, uint8_t pos_x, uint8_t pos_y)
 {
-    uint8_t end_x = obj->position_x, end_y = obj->position_y;
+    block->pos_x = pos_x;
+    block->pos_y = pos_y;
+}
+
+void moveBlockDirection(block_t *block, direction_t direction)
+{
+    int8_t end_x = block->pos_x, end_y = block->pos_y;
     switch (direction) {
         case Left:
             end_x -= 1;
@@ -172,35 +186,168 @@ void moveObject(linked_object_t *rootObject, object_t *obj, Direction direction)
             end_y -= 1;
             break;
     }
-    if(isValidMove(end_x, end_y, obj->rotation))
-    {
-        tryRemoveObject(rootObject, *obj);
-        obj->position_x = end_x;
-        obj->position_y = end_y;
-        tryAddObject(rootObject, obj);
-    }
+    moveBlock(block, end_x, end_y);
 }
 
-void rotateObject(linked_object_t *rootObject, object_t *obj)
+void moveObject(object_list_t *objects, object_t *obj, direction_t direction)
 {
-    if(obj->rotation == NoRotation) return;
-    uint8_t end_x = obj->position_x, end_y = obj->position_y;
-    if(isValidMove(end_x, end_y, obj->rotation))
+    if(!obj->moveable) return;
+    if(isValidMove(*objects, *obj, direction))
     {
-        tryRemoveObject(rootObject, *obj);
-        obj->position_x = end_x;
-        obj->position_y = end_y;
-        obj->rotation = obj->rotation ^ 3;
-        tryAddObject(rootObject, obj);
+        uint8_t i, next_y;
+        for(i = 0; i < obj->blocks->size; i++)
+        {
+            block_t *block = &obj->blocks->array[i];
+            moveBlockDirection(block, direction);
+        }
+        if(direction == Bottom)
+        {
+            for(i = 0; i < obj->blocks->size; i++)
+            {
+                block_t *block = &obj->blocks->array[i];
+                next_y = block->pos_y + 1;
+                if(obj->moveable)
+                {
+                    if(isBlockThere(*objects, block->pos_x, next_y, *obj))
+                    {
+                        collision(obj);
+                    } else if(block->pos_y == GRID_Y - 1)
+                    {
+                        collision(obj);
+                        checkForLastRow(objects);
+                    }
+                }
+            }
+        }
+    } else if(direction == Bottom)
+    {
+        collision(obj);
     }
 }
 
-void handleArrow(linked_object_t *rootObject, object_t *obj)
+void collision(object_t *obj)
+{
+    obj->moveable = false;
+}
+
+void checkForLastRow(object_list_t *objects)
+{
+    uint8_t i, j;
+    block_list_t *temp, *actual;
+    temp = calloc(1, sizeof(block_list_t));
+    temp->array = calloc(1, sizeof(block_t));
+    actual = calloc(1, sizeof(block_list_t));
+    temp->array = calloc(1, sizeof(block_t));
+    for(i = 0; i < objects->size; i++)
+    {
+        object_t *object = objects->array[i];
+        for(j = 0; j < object->blocks->size; j++)
+        {
+            block_t block = object->blocks->array[j];
+            if(block.pos_y == GRID_Y - 1)
+            {
+                appendBlockList(temp, block);
+            } else appendBlockList(actual, block);
+        }
+    }
+    if(temp->size == GRID_X)
+    {
+        for(i = 0; i < temp->size; i++)
+        {
+            block_t *block = &temp->array[i];
+            block->visible = false;
+        }
+        for(i = 0; i < actual->size; i++)
+        {
+            block_t *block = &actual->array[i];
+            block->pos_y += 1;
+        }
+    }
+}
+
+bool isValidRotation(object_list_t objects, object_t obj, rotation_t rotation, direction_t direction)
+{
+    block_t block = obj.blocks->array[0], block2 = obj.blocks->array[1], block3 = obj.blocks->array[2];
+    if(direction == Left)
+    {
+        if(rotation == Horizontal)
+        {
+            return (isValidPosition(block.pos_x - 2, block.pos_y + 2) &&
+            isValidPosition(block2.pos_x - 1, block2.pos_y + 1) &&
+            !isBlockThere(objects, block.pos_x - 2, block.pos_y + 2, obj) &&
+            !isBlockThere(objects, block2.pos_x - 1, block2.pos_y + 1, obj));
+        } else if(rotation == Vertical)
+        {
+            return (isValidPosition(block.pos_x, block.pos_y - 2) &&
+            isValidPosition(block2.pos_x - 1, block2.pos_y - 1) &&
+            isValidPosition(block3.pos_x - 2, block3.pos_y) &&
+            !isBlockThere(objects, block.pos_x, block.pos_y - 2, obj) &&
+            !isBlockThere(objects, block2.pos_x - 1, block2.pos_y - 1, obj) &&
+            !isBlockThere(objects, block3.pos_x - 2, block3.pos_y, obj));
+        }
+    } else if(direction == Right)
+    {
+        if(rotation == Horizontal)
+        {
+            return (isValidPosition(block.pos_x, block.pos_y + 2) &&
+            isValidPosition(block2.pos_x + 1, block2.pos_y + 1) &&
+            isValidPosition(block3.pos_x + 2, block3.pos_y) &&
+            !isBlockThere(objects, block.pos_x, block.pos_y + 2, obj) &&
+            !isBlockThere(objects,block2.pos_x + 1, block2.pos_y + 1, obj) &&
+            !isBlockThere(objects,block3.pos_x + 2, block3.pos_y, obj));
+        } else if(rotation == Vertical)
+        {
+            return (isValidPosition(block.pos_x + 2, block.pos_y - 2) &&
+            isValidPosition(block2.pos_x + 1, block2.pos_y - 1) &&
+            !isBlockThere(objects,block.pos_x + 2, block.pos_y - 2, obj) &&
+            !isBlockThere(objects,block2.pos_x + 1, block2.pos_y - 1, obj));
+        }
+    }
+    return false;
+}
+
+void rotateObject(object_list_t objects, object_t *obj, direction_t direction)
+{
+    if(obj->rotation == NoRotation || !obj->moveable) return;
+    rotation_t newRotation = obj->rotation ^ 3;
+    if(isValidRotation(objects, *obj, newRotation, direction))
+    {
+        block_t *block = &obj->blocks->array[0], *block2 = &obj->blocks->array[1], *block3 = &obj->blocks->array[2];
+        if(direction == Left)
+        {
+            if(newRotation == Horizontal)
+            {
+                moveBlock(block, block->pos_x - 2, block->pos_y + 2);
+                moveBlock(block2, block2->pos_x - 1, block2->pos_y + 1);
+            } else if(newRotation == Vertical)
+            {
+                moveBlock(block, block->pos_x, block->pos_y - 2);
+                moveBlock(block2, block2->pos_x - 1, block2->pos_y - 1);
+                moveBlock(block3, block3->pos_x - 2, block3->pos_y);
+            }
+        } else if(direction == Right)
+        {
+            if(newRotation == Horizontal)
+            {
+                moveBlock(block, block->pos_x, block->pos_y + 2);
+                moveBlock(block2, block2->pos_x + 1, block2->pos_y + 1);
+                moveBlock(block3, block3->pos_x + 2, block3->pos_y);
+            } else if(newRotation == Vertical)
+            {
+                moveBlock(block, block->pos_x + 2, block->pos_y - 2);
+                moveBlock(block2, block2->pos_x + 1, block2->pos_y - 1);
+            }
+        }
+        obj->rotation = newRotation;
+    }
+}
+
+void handleArrow(object_list_t *objects, object_t *obj)
 {
 #if defined(_WIN32) || defined(_WIN64)
     int temp = getch();
     if (temp == 0 || temp == 224) {
-        Direction direction;
+        direction_t direction;
         switch(getch()) {
             case 72:
                 direction = Top;
@@ -215,9 +362,11 @@ void handleArrow(linked_object_t *rootObject, object_t *obj)
                 direction = Bottom;
                 break;
         }
-        moveObject(rootObject, obj, direction);
-    } else if(temp == 32)
-        rotateObject(rootObject, obj);
+        moveObject(objects, obj, direction);
+    } else if(temp == 115) //Sinistra
+        rotateObject(*objects, obj, Left);
+    else if(temp == 100)
+        rotateObject(*objects, obj, Right);
     else if(temp == 33)
         exit(0);
 #elif
@@ -227,4 +376,68 @@ void handleArrow(linked_object_t *rootObject, object_t *obj)
 
 void clearConsole(void){
     system(CLEAR_CONSOLE);
+}
+
+void applyChanges(wchar_t *grid_ptr, object_list_t *objects)
+{
+    initGrid(grid_ptr);
+    drawObjects(grid_ptr, objects);
+    #if DEBUG == false
+    clearConsole();
+    #endif
+    printGrid(grid_ptr);
+}
+
+bool isEnded(object_list_t *objects)
+{
+    uint8_t i, j;
+    for(i = 0; i < objects->size; i++)
+    {
+        object_t *object = objects->array[i];
+        for(j = 0; j < object->blocks->size; j++)
+        {
+            block_t block = object->blocks->array[j];
+            if(block.pos_y == 0) return true;
+        }
+    }
+    return false;
+}
+
+void endGame()
+{
+    printf("The game is ended.");
+}
+
+object_t *randomObject(object_list_t *objects)
+{
+    if(isEnded(objects)) return NULL;
+    object_t *obj = generateObject(rand()%GRID_X, 0, rand()%3);
+    return obj;
+}
+
+object_t* generateObject(uint8_t position_x, uint8_t position_y, rotation_t rotation)
+{
+    object_t *object = calloc(1, sizeof(object_t));
+    object->blocks = calloc(1, sizeof(block_list_t));
+    switch (rotation) {
+        case NoRotation:
+            appendBlockList(object->blocks, *generateBlock(position_x, position_y, true));
+            appendBlockList(object->blocks, *generateBlock(position_x + 1, position_y, true));
+            appendBlockList(object->blocks, *generateBlock(position_x, position_y + 1, true));
+            appendBlockList(object->blocks, *generateBlock(position_x + 1, position_y + 1, true));
+            break;
+        case Horizontal:
+            appendBlockList(object->blocks, *generateBlock(position_x, position_y, true));
+            appendBlockList(object->blocks, *generateBlock(position_x + 1, position_y, true));
+            appendBlockList(object->blocks, *generateBlock(position_x + 2, position_y, true));
+            break;
+        case Vertical:
+            appendBlockList(object->blocks, *generateBlock(position_x, position_y, true));
+            appendBlockList(object->blocks, *generateBlock(position_x, position_y + 1, true));
+            appendBlockList(object->blocks, *generateBlock(position_x, position_y + 2, true));
+            break;
+    }
+    object->rotation = rotation;
+    object->moveable = true;
+    return object;
 }

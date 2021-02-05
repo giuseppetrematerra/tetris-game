@@ -2,18 +2,19 @@
 // Created by giuse on 01/02/2021.
 //
 
+
+
 #ifndef TETRIS_OBJECT_H
 #define TETRIS_OBJECT_H
 
-#include <stdint.h>
-#include <stdbool.h>
+#include "block_list.h"
 
 typedef enum
 {
     NoRotation,
-    HorizontalLine,
-    VerticalLine
-} Rotation;
+    Horizontal,
+    Vertical
+} rotation_t;
 
 typedef enum
 {
@@ -21,34 +22,16 @@ typedef enum
     Right,
     Bottom,
     Top
-} Direction;
+} direction_t;
 
 typedef struct object
 {
-    uint8_t position_x;
-    uint8_t position_y;
-    Rotation rotation;
+    block_list_t *blocks;
+    rotation_t rotation;
+    bool moveable;
 } object_t;
 
-bool compare(object_t first, object_t second);
-
-struct Utente
-{
-    char nome[30];
-    char cognome[30];
-    char domicilio[30];
-    char telefono[30];
-};
-
-struct Elenco
-{
-    int index;
-    struct Utente lista[30];
-};
-
-/*
- * utente[0] = Barbagianni Roberto, 3334549579845, Via Diaz, 1
- * utente[0] = Amato Tizio, 3333445757844, Via Lol, 2
- */
+bool compareObject(object_t first, object_t second);
+bool objectHasBlocks(object_t obj, block_list_t blocks);
 
 #endif //TETRIS_OBJECT_H

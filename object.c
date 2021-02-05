@@ -4,7 +4,19 @@
 
 #include "object.h"
 
-bool compare(object_t first, object_t second)
+bool compareObject(object_t first, object_t second)
 {
-    return (first.position_x == second.position_x && first.position_y == second.position_y && first.rotation == second.rotation);
+    return (first.rotation == second.rotation && objectHasBlocks(first, *second.blocks));
+}
+
+bool objectHasBlocks(object_t obj, block_list_t blocks)
+{
+    if(obj.blocks->size != blocks.size) return false;
+    uint8_t i;
+    for(i = 0; i < obj.blocks->size; i++)
+    {
+        if(!containsBlock(blocks, obj.blocks->array[i]))
+            return false;
+    }
+    return true;
 }
