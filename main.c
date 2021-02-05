@@ -19,11 +19,11 @@ int main()
     line6 = generateObject(8, 7, NoRotation);
     initGrid(tempGrid);
     initGrid(finalGrid);
-    tryAddObject(objects, line2);
-    tryAddObject(objects, line3);
-    tryAddObject(objects, line4);
-    tryAddObject(objects, line5);
-    tryAddObject(objects, line6);
+    //tryAddObject(objects, line2);
+    //tryAddObject(objects, line3);
+    //tryAddObject(objects, line4);
+    //tryAddObject(objects, line5);
+    //tryAddObject(objects, line6);
     actualObject = randomObject(objects);
     tryAddObject(objects, actualObject);
     applyChanges(tempGrid, objects);
@@ -31,12 +31,16 @@ int main()
     actualObject = line6;
     moveObject(objects, actualObject, Bottom);
     applyChanges(tempGrid, objects);
+    checkForLastRow(objects);
+    applyChanges(tempGrid, objects);
+    actualObject = randomObject(objects);
     moveObject(objects, actualObject, Bottom);
     applyChanges(tempGrid, objects);
     moveObject(objects, actualObject, Bottom);
     applyChanges(tempGrid, objects);
 #else
     do {
+        bool moved = false;
         if(!actualObject->moveable)
         {
             actualObject = randomObject(objects);
@@ -44,8 +48,24 @@ int main()
             tryAddObject(objects, actualObject);
             applyChanges(tempGrid, objects);
         }
-        handleArrow(objects, actualObject);
-        applyChanges(tempGrid, objects);
+        clock_t tstart = clock();
+        while((clock() - tstart) / CLOCKS_PER_SEC < 1) {
+            if(kbhit()) {
+                handleArrow(objects, actualObject);
+                checkForLastRow(objects);
+                applyChanges(tempGrid, objects);
+                moved = true;
+                break;
+            }
+        }
+        if(!moved)
+        {
+            moveObject(objects, actualObject, Bottom);
+            checkForLastRow(objects);
+            applyChanges(tempGrid, objects);
+            moved = false;
+        }
+        if(objects->size == 20) break;
     } while(true);
     endGame();
 #endif

@@ -12,6 +12,7 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <conio.h>
+#include <Windows.h>
 #define EMPTY_CHAR 176//32//176
 #define BLOCK_CHAR 35//254//219
 #define TOPLEFT_CHAR 218
@@ -42,7 +43,7 @@
 #define FULL_GRID_X (GRID_MARGIN_X + 1)
 #define FULL_GRID_Y (GRID_MARGIN_Y + 1)
 
-#define DEBUG true
+#define DEBUG false
 
 static int16_t score;
 static object_t *actualObject;

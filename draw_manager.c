@@ -99,6 +99,7 @@ void drawObject(wchar_t *grid_ptr, object_t obj)
     for(i = 0; i < obj.blocks->size; i++)
     {
         block_t block = obj.blocks->array[i];
+        if(!block.visible) continue;
         drawBlock(grid_ptr, block);
     }
 }
@@ -198,6 +199,7 @@ void moveObject(object_list_t *objects, object_t *obj, direction_t direction)
         for(i = 0; i < obj->blocks->size; i++)
         {
             block_t *block = &obj->blocks->array[i];
+            if(!block->visible) continue;
             moveBlockDirection(block, direction);
         }
         if(direction == Bottom)
@@ -205,6 +207,7 @@ void moveObject(object_list_t *objects, object_t *obj, direction_t direction)
             for(i = 0; i < obj->blocks->size; i++)
             {
                 block_t *block = &obj->blocks->array[i];
+                if(!block->visible) continue;
                 next_y = block->pos_y + 1;
                 if(obj->moveable)
                 {
@@ -232,36 +235,38 @@ void collision(object_t *obj)
 
 void checkForLastRow(object_list_t *objects)
 {
-    uint8_t i, j;
-    block_list_t *temp, *actual;
-    temp = calloc(1, sizeof(block_list_t));
-    temp->array = calloc(1, sizeof(block_t));
-    actual = calloc(1, sizeof(block_list_t));
-    temp->array = calloc(1, sizeof(block_t));
+    uint8_t i, j, count = 0;
     for(i = 0; i < objects->size; i++)
     {
         object_t *object = objects->array[i];
         for(j = 0; j < object->blocks->size; j++)
         {
             block_t block = object->blocks->array[j];
+            if(!block.visible) continue;
             if(block.pos_y == GRID_Y - 1)
             {
-                appendBlockList(temp, block);
-            } else appendBlockList(actual, block);
+                count++;
+            }
         }
     }
-    if(temp->size == GRID_X)
+    if(count == GRID_X)
     {
-        for(i = 0; i < temp->size; i++)
+        for(i = 0; i < objects->size; i++)
         {
-            block_t *block = &temp->array[i];
-            block->visible = false;
+            object_t *object = objects->array[i];
+            for(j = 0; j < object->blocks->size; j++)
+            {
+                block_t *block = &object->blocks->array[j];
+                if(block->pos_y == GRID_Y - 1)
+                {
+                    block->visible = false;
+                } else
+                {
+                    block->pos_y += 1;
+                }
+            }
         }
-        for(i = 0; i < actual->size; i++)
-        {
-            block_t *block = &actual->array[i];
-            block->pos_y += 1;
-        }
+        score++;
     }
 }
 
@@ -349,9 +354,9 @@ void handleArrow(object_list_t *objects, object_t *obj)
     if (temp == 0 || temp == 224) {
         direction_t direction;
         switch(getch()) {
-            case 72:
+            /*case 72:
                 direction = Top;
-                break;
+                break;*/
             case 75:
                 direction = Left;
                 break;
@@ -385,7 +390,7 @@ void applyChanges(wchar_t *grid_ptr, object_list_t *objects)
     #if DEBUG == false
     clearConsole();
     #endif
-    printGrid(grid_ptr);
+    drawFinalGrid(grid_ptr);
 }
 
 bool isEnded(object_list_t *objects)
@@ -405,7 +410,7 @@ bool isEnded(object_list_t *objects)
 
 void endGame()
 {
-    printf("The game is ended.");
+    printf("Il gioco \x8A finito.\n");
 }
 
 object_t *randomObject(object_list_t *objects)
