@@ -3,8 +3,6 @@
 //
 
 #include "draw_manager.h"
-#include <stdio.h>
-#include <stdlib.h>
 
 void initGrid(wchar_t *grid_ptr)
 {
@@ -17,6 +15,7 @@ void initGrid(wchar_t *grid_ptr)
         }
     }
 }
+
 
 bool isBlockThere(object_list_t objects, uint8_t x, uint8_t y, object_t exclude)
 {
@@ -35,10 +34,12 @@ bool isBlockThere(object_list_t objects, uint8_t x, uint8_t y, object_t exclude)
     return false;
 }
 
+
 bool isValidPosition(uint8_t x, uint8_t y)
 {
     return(x >= 0 && x < GRID_X && y >= 0 && y < GRID_Y);
 }
+
 
 bool isValidMove(object_list_t objects, object_t obj, direction_t direction)
 {
@@ -72,10 +73,11 @@ bool isValidMove(object_list_t objects, object_t obj, direction_t direction)
 }
 
 
-bool canDrawBlock(object_list_t objects, block_t block)
+bool canDrawBlock(object_list_t objects, block_t block, object_t exclude)
 {
-    return isValidPosition(block.pos_x, block.pos_y);
+    return isValidPosition(block.pos_x, block.pos_y) && !isBlockThere(objects, block.pos_x, block.pos_y, exclude);
 }
+
 
 bool canDrawObject(object_list_t objects, object_t obj)
 {
@@ -83,15 +85,17 @@ bool canDrawObject(object_list_t objects, object_t obj)
     for(i = 0; i < obj.blocks->size; i++)
     {
         block_t block = obj.blocks->array[i];
-        if(!canDrawBlock(objects, block)) return false;
+        if(!canDrawBlock(objects, block, obj)) return false;
     }
     return true;
 }
+
 
 void drawBlock(wchar_t *grid_ptr, block_t block)
 {
     *(grid_ptr + block.pos_x + (GRID_Y * block.pos_y)) = BLOCK_CHAR;
 }
+
 
 void drawObject(wchar_t *grid_ptr, object_t obj)
 {
@@ -103,6 +107,7 @@ void drawObject(wchar_t *grid_ptr, object_t obj)
         drawBlock(grid_ptr, block);
     }
 }
+
 
 void drawObjects(wchar_t *grid_ptr, object_list_t *list)
 {
@@ -122,6 +127,7 @@ void tryAddObject(object_list_t *list, object_t *object)
     }
 }
 
+
 void printGrid(const wchar_t *grid_ptr)
 {
     int y, x;
@@ -135,6 +141,7 @@ void printGrid(const wchar_t *grid_ptr)
     }
     printf("\n");
 }
+
 
 void drawFinalGrid(const wchar_t *grid_ptr)
 {
@@ -164,11 +171,13 @@ void drawFinalGrid(const wchar_t *grid_ptr)
     printf("\n");
 }
 
+
 void moveBlock(block_t *block, uint8_t pos_x, uint8_t pos_y)
 {
     block->pos_x = pos_x;
     block->pos_y = pos_y;
 }
+
 
 void moveBlockDirection(block_t *block, direction_t direction)
 {
@@ -190,18 +199,24 @@ void moveBlockDirection(block_t *block, direction_t direction)
     moveBlock(block, end_x, end_y);
 }
 
+
 void moveObject(object_list_t *objects, object_t *obj, direction_t direction)
 {
     if(!obj->moveable) return;
+    //Controlla se il movimento è valido
     if(isValidMove(*objects, *obj, direction))
     {
         uint8_t i, next_y;
+        //Per ogni blocco dell'oggetto, esegue il movimento
         for(i = 0; i < obj->blocks->size; i++)
         {
             block_t *block = &obj->blocks->array[i];
             if(!block->visible) continue;
             moveBlockDirection(block, direction);
         }
+        //Se la direzione è rivolta verso il basso, effettua due controlli:
+        //- Se l'oggetto collide con un altro blocco
+        //- Se l'oggetto tocca il fondo e quindi c'è bisogno di controllare il fondo
         if(direction == Bottom)
         {
             for(i = 0; i < obj->blocks->size; i++)
@@ -213,10 +228,10 @@ void moveObject(object_list_t *objects, object_t *obj, direction_t direction)
                 {
                     if(isBlockThere(*objects, block->pos_x, next_y, *obj))
                     {
-                        collision(obj);
+                        obj->moveable = false;
                     } else if(block->pos_y == GRID_Y - 1)
                     {
-                        collision(obj);
+                        obj->moveable = false;
                         checkForLastRow(objects);
                     }
                 }
@@ -224,18 +239,15 @@ void moveObject(object_list_t *objects, object_t *obj, direction_t direction)
         }
     } else if(direction == Bottom)
     {
-        collision(obj);
+        obj->moveable = false;
     }
 }
 
-void collision(object_t *obj)
-{
-    obj->moveable = false;
-}
 
 void checkForLastRow(object_list_t *objects)
 {
     uint8_t i, j, count = 0;
+    //Conta ogni oggetto che si trova sul fondo e incrementa il conteggio
     for(i = 0; i < objects->size; i++)
     {
         object_t *object = objects->array[i];
@@ -249,6 +261,8 @@ void checkForLastRow(object_list_t *objects)
             }
         }
     }
+    //Se il conteggio è pari alla griglia, vuol dire che bisogna svuotare il fondo
+    //e far scendere i blocchi di una riga
     if(count == GRID_X)
     {
         for(i = 0; i < objects->size; i++)
@@ -270,9 +284,11 @@ void checkForLastRow(object_list_t *objects)
     }
 }
 
+
 bool isValidRotation(object_list_t objects, object_t obj, rotation_t rotation, direction_t direction)
 {
     block_t block = obj.blocks->array[0], block2 = obj.blocks->array[1], block3 = obj.blocks->array[2];
+    //Controlla per ogni direzione e rotazione se le nuove posizioni sono valide
     if(direction == Left)
     {
         if(rotation == Horizontal)
@@ -311,13 +327,17 @@ bool isValidRotation(object_list_t objects, object_t obj, rotation_t rotation, d
     return false;
 }
 
+
 void rotateObject(object_list_t objects, object_t *obj, direction_t direction)
 {
+    //Se è un quadrato oppure l'oggetto non è muovibile, non esiste rotazione
     if(obj->rotation == NoRotation || !obj->moveable) return;
     rotation_t newRotation = obj->rotation ^ 3;
+    //Controlla se la rotazione voluta è valida per il determinato oggetto
     if(isValidRotation(objects, *obj, newRotation, direction))
     {
         block_t *block = &obj->blocks->array[0], *block2 = &obj->blocks->array[1], *block3 = &obj->blocks->array[2];
+        //Per ogni direzione, muove i blocchi dell'oggetto in modo da ottenere la rotazione voluta
         if(direction == Left)
         {
             if(newRotation == Horizontal)
@@ -347,7 +367,8 @@ void rotateObject(object_list_t objects, object_t *obj, direction_t direction)
     }
 }
 
-void handleArrow(object_list_t *objects, object_t *obj)
+
+void handleKeyboard(object_list_t *objects, object_t *obj)
 {
 #if defined(_WIN32) || defined(_WIN64)
     int temp = getch();
@@ -379,9 +400,11 @@ void handleArrow(object_list_t *objects, object_t *obj)
 #endif
 }
 
-void clearConsole(void){
+
+void clearConsole(){
     system(CLEAR_CONSOLE);
 }
+
 
 void applyChanges(wchar_t *grid_ptr, object_list_t *objects)
 {
@@ -392,6 +415,7 @@ void applyChanges(wchar_t *grid_ptr, object_list_t *objects)
     #endif
     drawFinalGrid(grid_ptr);
 }
+
 
 bool isEnded(object_list_t *objects)
 {
@@ -408,10 +432,14 @@ bool isEnded(object_list_t *objects)
     return false;
 }
 
-void endGame()
+
+void endGame(bool won)
 {
-    printf("Il gioco \x8A finito.\n");
+    printf("Il gioco \x8A terminato.\n");
+    if(won) printf("Hai vinto! Congratulazioni!");
+    else printf("Hai perso. Mi dispiace :(");
 }
+
 
 object_t *randomObject(object_list_t *objects)
 {
@@ -420,7 +448,8 @@ object_t *randomObject(object_list_t *objects)
     return obj;
 }
 
-object_t* generateObject(uint8_t position_x, uint8_t position_y, rotation_t rotation)
+
+object_t *generateObject(uint8_t position_x, uint8_t position_y, rotation_t rotation)
 {
     object_t *object = calloc(1, sizeof(object_t));
     object->blocks = calloc(1, sizeof(block_list_t));

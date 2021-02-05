@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <locale.h>
 #include "draw_manager.h"
 
@@ -7,38 +5,19 @@ int main()
 {
     setlocale(LC_ALL, "en_US.UTF-8");
     srand(time(NULL) + 777);
-    object_t *line2, *line3, *line4, *line5, *line6, *line7, *line8, *line9;
     object_list_t *objects = calloc(1, sizeof(object_list_t));
-    wchar_t *tempGrid = calloc(GRID_Y * GRID_X, sizeof(wchar_t*));
-    wchar_t *finalGrid = calloc(GRID_Y * GRID_X, sizeof(wchar_t*));
-    //tempObject = generateObject(5, 3, Vertical);
-    line2 = generateObject(0, 8, NoRotation);
-    line3 = generateObject(2, 8, NoRotation);
-    line4 = generateObject(4, 8, NoRotation);
-    line5 = generateObject(6, 8, NoRotation);
-    line6 = generateObject(8, 7, NoRotation);
-    initGrid(tempGrid);
-    initGrid(finalGrid);
-    //tryAddObject(objects, line2);
-    //tryAddObject(objects, line3);
-    //tryAddObject(objects, line4);
-    //tryAddObject(objects, line5);
-    //tryAddObject(objects, line6);
+    wchar_t *grid = calloc(GRID_Y * GRID_X, sizeof(wchar_t*));
+    bool won = false;
+    printf("Benvenuti nel fantastico gioco del Tetris!\n");
+    printf("Piazza 20 oggetti per vincere e fai attenzione a non finire lo spazio!\n");
+    printf("Ogni volta che completi il fondo, riceverei 1 punto!\n");
+    printf("Buon divertimento! :D\n");
+    printf("Premi INVIO per cominciare...\n\n");
+    getch();
+    initGrid(grid);
     actualObject = randomObject(objects);
     tryAddObject(objects, actualObject);
-    applyChanges(tempGrid, objects);
-#if DEBUG == true
-    actualObject = line6;
-    moveObject(objects, actualObject, Bottom);
-    applyChanges(tempGrid, objects);
-    checkForLastRow(objects);
-    applyChanges(tempGrid, objects);
-    actualObject = randomObject(objects);
-    moveObject(objects, actualObject, Bottom);
-    applyChanges(tempGrid, objects);
-    moveObject(objects, actualObject, Bottom);
-    applyChanges(tempGrid, objects);
-#else
+    applyChanges(grid, objects);
     do {
         bool moved = false;
         if(!actualObject->moveable)
@@ -46,14 +25,14 @@ int main()
             actualObject = randomObject(objects);
             if(actualObject == NULL) break;
             tryAddObject(objects, actualObject);
-            applyChanges(tempGrid, objects);
+            applyChanges(grid, objects);
         }
         clock_t tstart = clock();
         while((clock() - tstart) / CLOCKS_PER_SEC < 1) {
             if(kbhit()) {
-                handleArrow(objects, actualObject);
+                handleKeyboard(objects, actualObject);
                 checkForLastRow(objects);
-                applyChanges(tempGrid, objects);
+                applyChanges(grid, objects);
                 moved = true;
                 break;
             }
@@ -62,18 +41,14 @@ int main()
         {
             moveObject(objects, actualObject, Bottom);
             checkForLastRow(objects);
-            applyChanges(tempGrid, objects);
+            applyChanges(grid, objects);
             moved = false;
         }
-        if(objects->size == 20) break;
+        if(objects->size == 20) {
+            won = true;
+            break;
+        }
     } while(true);
-    endGame();
-#endif
-
+    endGame(won);
     return 0;
-}
-
-void tick()
-{
-
 }
